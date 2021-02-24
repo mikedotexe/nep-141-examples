@@ -37,7 +37,7 @@ fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract
 
         init_method: new(
             ValidAccountId::try_from(master_account.account_id()).unwrap(),
-            initial_balance.into(),
+            U128::from(initial_balance),
             "1.0.0".to_string(),
             "Mochi Tokens".to_string(),
             "MOCHI".to_string(),
@@ -75,24 +75,37 @@ fn test_sim_transfer() {
     let initial_balance = to_yocto("100000");
     let (master_account, contract, alice) = init(initial_balance);
     // Uses default gas amount, `near_sdk_sim::DEFAULT_GAS`
-    let res = master_account.call(
+    let res = alice.call(
         PendingContractTx::new(
             &contract.user_account.account_id(),
-            "ft_transfer",
-            json!({ "account_id": alice.account_id(), "transfer_amount": transfer_amount }),
+            "storage_deposit",
+            json!({}),
             false,
         ),
-        STORAGE_AMOUNT,
+        2350000000000000000000,
         DEFAULT_GAS,
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
-    let value = master_account.call(
+    let res = master_account.call(
+        PendingContractTx::new(
+            &contract.user_account.account_id(),
+            "ft_transfer",
+            json!({ "receiver_id": alice.account_id(), "amount": U128::from(transfer_amount) }),
+            false,
+        ),
+        1,
+        DEFAULT_GAS,
+    );
+    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
+    assert!(res.is_ok());
+
+    let value = alice.call(
         PendingContractTx::new(
             "contract",
             "ft_balance_of",
-            json!({ "account_id": alice.account_id() }),
+            json!({ "account_id": master_account.account_id() }),
             true,
         ),
         STORAGE_AMOUNT,
