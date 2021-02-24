@@ -46,13 +46,13 @@ fn init(initial_balance: u128) -> (UserAccount, UserAccount) {
             19
         )
     );
-    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
-    alice.call(
+    let bob = master_account.create_user("bob".to_string(), to_yocto("100"));
+    bob.call(
         PendingContractTx::new(FT_CONTRACT, "storage_deposit", json!({}), false),
         2350000000000000000000,
         DEFAULT_GAS,
     );
-    (master_account, alice)
+    (master_account, bob)
 }
 
 /// Example of how to create and use an user transaction.
@@ -75,30 +75,61 @@ pub fn mint_token() {
 }
 
 #[test]
-fn simulate_transfer() {
-    let initial_balance = to_yocto("100000");
-    let (master_account, alice) = init(initial_balance);
+fn simulate_total_supply() {
+    let initial_balance = to_yocto("100");
+    let (alice, _) = init(initial_balance);
+
+    let total_supply: U128 = alice
+        .view(PendingContractTx::new(
+            FT_CONTRACT,
+            "ft_total_supply",
+            json!({}),
+            true,
+        ))
+        .unwrap_json();
+
+    assert_eq!(initial_balance, total_supply.0);
+}
+
+#[test]
+fn simulate_simple_transfer() {
+    let initial_balance = to_yocto("100");
+    let (alice, bob) = init(initial_balance);
 
     let transfer_amount = to_yocto("100");
-    let res = master_account.call(
+    let res = alice.call(
         PendingContractTx::new(
             FT_CONTRACT,
             "ft_transfer",
-            json!({ "receiver_id": alice.account_id(), "amount": U128::from(transfer_amount) }),
+            json!({
+                "receiver_id": bob.account_id(),
+                "amount": U128::from(transfer_amount)
+            }),
             false,
         ),
         1,
         DEFAULT_GAS,
     );
-    // println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
-    let value = alice.view(PendingContractTx::new(
-        FT_CONTRACT,
-        "ft_balance_of",
-        json!({ "account_id": master_account.account_id() }),
-        true,
-    ));
-    let value: U128 = value.unwrap_json();
-    assert_eq!(initial_balance - transfer_amount, value.0);
+    let alice_balance: U128 = alice
+        .view(PendingContractTx::new(
+            FT_CONTRACT,
+            "ft_balance_of",
+            json!({ "account_id": alice.account_id() }),
+            true,
+        ))
+        .unwrap_json();
+
+    let bob_balance: U128 = alice
+        .view(PendingContractTx::new(
+            FT_CONTRACT,
+            "ft_balance_of",
+            json!({ "account_id": bob.account_id() }),
+            true,
+        ))
+        .unwrap_json();
+
+    assert_eq!(initial_balance - transfer_amount, alice_balance.0);
+    assert_eq!(transfer_amount, bob_balance.0);
 }
