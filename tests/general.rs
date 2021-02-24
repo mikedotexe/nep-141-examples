@@ -21,7 +21,6 @@ near_sdk_sim::lazy_static! {
 
 fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract>, UserAccount) {
     let master_account = init_simulator(None);
-    // println!("aloha {}", master_account.account_id());
     // uses default values for deposit and gas
     let contract_user = deploy!(
         // Contract Proxy
@@ -72,7 +71,7 @@ pub fn mint_token() {
 }
 
 #[test]
-fn test_sim_transfer() {
+fn simulate_transfer() {
     let transfer_amount = to_yocto("100");
     let initial_balance = to_yocto("100000");
     let (master_account, contract, alice) = init(initial_balance);
@@ -87,7 +86,7 @@ fn test_sim_transfer() {
         2350000000000000000000,
         DEFAULT_GAS,
     );
-    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
+    // println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
     let res = master_account.call(
@@ -100,7 +99,7 @@ fn test_sim_transfer() {
         1,
         DEFAULT_GAS,
     );
-    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
+    // println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
     let value = alice.call(
