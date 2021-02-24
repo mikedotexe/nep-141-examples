@@ -5,6 +5,7 @@ use near_sdk_sim::{
 
 /// Bring contract crate into namespace
 extern crate fungible_token;
+use compound::CompoundContract;
 /// Import the generated proxy contract
 use fungible_token::ContractContract;
 use near_sdk::json_types::U128;
@@ -16,6 +17,9 @@ const FT_CONTRACT: &str = "ft-contract";
 // Load in contract bytes
 near_sdk_sim::lazy_static! {
     static ref TOKEN_WASM_BYTES: &'static [u8] = include_bytes!("../res/fungible_token.wasm").as_ref();
+}
+near_sdk_sim::lazy_static! {
+    static ref COMPOUND_WASM_BYTES: &'static [u8] = include_bytes!("./contracts/res/compound.wasm").as_ref();
 }
 
 fn init(initial_balance: u128) -> (UserAccount, UserAccount) {
