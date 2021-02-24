@@ -11,15 +11,15 @@
 */
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
-use near_sdk::json_types::{U128, ValidAccountId};
+use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Promise, StorageUsage};
 
 pub use crate::fungible_token_core::*;
 pub use crate::fungible_token_metadata::*;
 use crate::internal::*;
 pub use crate::storage_manager::*;
-use std::num::ParseIntError;
 use std::convert::TryInto;
+use std::num::ParseIntError;
 
 mod fungible_token_core;
 mod fungible_token_metadata;
@@ -31,7 +31,7 @@ static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc:
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct AccountInfo {
-    safe_mode: bool
+    safe_mode: bool,
 }
 
 #[near_bindgen]
@@ -49,7 +49,7 @@ pub struct Contract {
     /// The storage size in bytes for one account.
     pub account_storage_usage: StorageUsage,
 
-    pub ft_metadata: FungibleTokenMetadata
+    pub ft_metadata: FungibleTokenMetadata,
 }
 
 impl Default for Contract {
@@ -61,13 +61,23 @@ impl Default for Contract {
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new(owner_id: ValidAccountId, total_supply: U128, version: String, name: String, symbol: String, reference: String, reference_hash: String, decimals: u8) -> Self {
+    pub fn new(
+        owner_id: ValidAccountId,
+        total_supply: U128,
+        version: String,
+        name: String,
+        symbol: String,
+        reference: String,
+        reference_hash: String,
+        decimals: u8,
+    ) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let ref_hash_result: Result<Vec<u8>, ParseIntError> = (0..reference_hash.len())
             .step_by(2)
             .map(|i| u8::from_str_radix(&reference_hash[i..i + 2], 16))
             .collect();
-        let ref_hash_fixed_bytes: [u8; 32] = ref_hash_result.unwrap().as_slice().try_into().unwrap();
+        let ref_hash_fixed_bytes: [u8; 32] =
+            ref_hash_result.unwrap().as_slice().try_into().unwrap();
 
         let mut this = Self {
             accounts: LookupMap::new(b"a".to_vec()),
@@ -80,24 +90,22 @@ impl Contract {
                 symbol,
                 reference,
                 reference_hash: ref_hash_fixed_bytes,
-                decimals
-            }
+                decimals,
+            },
         };
         // Determine cost of insertion into LookupMap
         let initial_storage_usage = env::storage_usage();
         let tmp_account_id = unsafe { String::from_utf8_unchecked(vec![b'a'; 64]) };
         this.accounts.insert(&tmp_account_id, &0u128);
-        this.account_info.insert(&tmp_account_id, &AccountInfo {
-            safe_mode: true
-        });
+        this.account_info
+            .insert(&tmp_account_id, &AccountInfo { safe_mode: true });
         this.account_storage_usage = env::storage_usage() - initial_storage_usage;
         this.accounts.remove(&tmp_account_id);
         // Make owner have total supply
         let total_supply_u128: u128 = total_supply.into();
         this.accounts.insert(&owner_id.as_ref(), &total_supply_u128);
-        this.account_info.insert(&tmp_account_id, &AccountInfo {
-            safe_mode: true
-        });
+        this.account_info
+            .insert(&tmp_account_id, &AccountInfo { safe_mode: true });
         this
     }
 }
@@ -158,11 +166,9 @@ mod fungible_token_tests {
             String::from("0.1.0"),
             String::from("NEAR Test Token"),
             String::from("TEST"),
-            String::from(
-                "https://github.com/near/core-contracts/tree/master/w-near-141",
-            ),
+            String::from("https://github.com/near/core-contracts/tree/master/w-near-141"),
             "7c879fa7b49901d0ecc6ff5d64d7f673da5e4a5eb52a8d50a214175760d8919a".to_string(),
-            24
+            24,
         );
         assert_eq!(contract.ft_total_supply().0, 1_000_000_000_000_000);
         assert_eq!(contract.ft_balance_of(alice()).0, ZERO_U128);

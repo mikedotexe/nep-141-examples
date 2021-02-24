@@ -1,7 +1,6 @@
 use near_sdk::{json_types::ValidAccountId, serde_json::json, PendingContractTx};
 use near_sdk_sim::{
-    deploy, init_simulator, near_crypto::Signer, to_yocto, ContractAccount, UserAccount,
-    DEFAULT_GAS, STORAGE_AMOUNT,
+    deploy, init_simulator, near_crypto::Signer, to_yocto, UserAccount, DEFAULT_GAS,
 };
 
 /// Bring contract crate into namespace
@@ -12,21 +11,21 @@ use near_sdk::json_types::U128;
 use near_sdk_sim::account::AccessKey;
 use std::convert::TryFrom;
 
-const FT_CONTRACT_NAME: &str = "ft-contract";
+const FT_CONTRACT: &str = "ft-contract";
 
 // Load in contract bytes
 near_sdk_sim::lazy_static! {
     static ref TOKEN_WASM_BYTES: &'static [u8] = include_bytes!("../res/fungible_token.wasm").as_ref();
 }
 
-fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract>, UserAccount) {
+fn init(initial_balance: u128) -> (UserAccount, UserAccount) {
     let master_account = init_simulator(None);
     // uses default values for deposit and gas
-    let contract_user = deploy!(
+    deploy!(
         // Contract Proxy
         contract: ContractContract,
         // Contract account id
-        contract_id: FT_CONTRACT_NAME,
+        contract_id: FT_CONTRACT,
         // Bytes of contract
         bytes: &TOKEN_WASM_BYTES,
         // User deploying the contract,
@@ -48,13 +47,18 @@ fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract
         )
     );
     let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
-    (master_account, contract_user, alice)
+    alice.call(
+        PendingContractTx::new(FT_CONTRACT, "storage_deposit", json!({}), false),
+        2350000000000000000000,
+        DEFAULT_GAS,
+    );
+    (master_account, alice)
 }
 
 /// Example of how to create and use an user transaction.
 fn init2(initial_balance: u128) {
     let master_account = init_simulator(None);
-    let txn = master_account.create_transaction(FT_CONTRACT_NAME.into());
+    let txn = master_account.create_transaction(FT_CONTRACT.into());
     // uses default values for deposit and gas
     let res = txn
         .create_account()
@@ -72,26 +76,13 @@ pub fn mint_token() {
 
 #[test]
 fn simulate_transfer() {
-    let transfer_amount = to_yocto("100");
     let initial_balance = to_yocto("100000");
-    let (master_account, contract, alice) = init(initial_balance);
-    // Uses default gas amount, `near_sdk_sim::DEFAULT_GAS`
-    let res = alice.call(
-        PendingContractTx::new(
-            &contract.user_account.account_id(),
-            "storage_deposit",
-            json!({}),
-            false,
-        ),
-        2350000000000000000000,
-        DEFAULT_GAS,
-    );
-    // println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
-    assert!(res.is_ok());
+    let (master_account, alice) = init(initial_balance);
 
+    let transfer_amount = to_yocto("100");
     let res = master_account.call(
         PendingContractTx::new(
-            &contract.user_account.account_id(),
+            FT_CONTRACT,
             "ft_transfer",
             json!({ "receiver_id": alice.account_id(), "amount": U128::from(transfer_amount) }),
             false,
@@ -102,17 +93,12 @@ fn simulate_transfer() {
     // println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
-    let value = alice.call(
-        PendingContractTx::new(
-            FT_CONTRACT_NAME,
-            "ft_balance_of",
-            json!({ "account_id": master_account.account_id() }),
-            true,
-        ),
-        STORAGE_AMOUNT,
-        DEFAULT_GAS,
-    );
-    // let value = view!(contract.ft_balance_of(master_account.account_id()));
+    let value = alice.view(PendingContractTx::new(
+        FT_CONTRACT,
+        "ft_balance_of",
+        json!({ "account_id": master_account.account_id() }),
+        true,
+    ));
     let value: U128 = value.unwrap_json();
     assert_eq!(initial_balance - transfer_amount, value.0);
 }
