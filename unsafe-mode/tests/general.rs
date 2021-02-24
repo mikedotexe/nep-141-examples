@@ -5,16 +5,16 @@ use near_sdk_sim::{
 };
 
 /// Bring contract crate into namespace
-extern crate fungible_token;
+extern crate fungible_token_unsafe_mode;
 /// Import the generated proxy contract
-use fungible_token::ContractContract;
+use fungible_token_unsafe_mode::ContractContract;
 use near_sdk::json_types::U128;
 use near_sdk_sim::account::AccessKey;
 use std::convert::TryFrom;
 
 // Load in contract bytes
 near_sdk_sim::lazy_static! {
-    static ref TOKEN_WASM_BYTES: &'static [u8] = include_bytes!("../res/fungible_token.wasm").as_ref();
+    static ref TOKEN_WASM_BYTES: &'static [u8] = include_bytes!("../res/fungible_token_unsafe_mode.wasm").as_ref();
 }
 
 fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract>, UserAccount) {
