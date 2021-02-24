@@ -12,6 +12,8 @@ use near_sdk::json_types::U128;
 use near_sdk_sim::account::AccessKey;
 use std::convert::TryFrom;
 
+const FT_CONTRACT_NAME: &str = "ft-contract";
+
 // Load in contract bytes
 near_sdk_sim::lazy_static! {
     static ref TOKEN_WASM_BYTES: &'static [u8] = include_bytes!("../res/fungible_token.wasm").as_ref();
@@ -25,7 +27,7 @@ fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract
         // Contract Proxy
         contract: ContractContract,
         // Contract account id
-        contract_id: "contract",
+        contract_id: FT_CONTRACT_NAME,
         // Bytes of contract
         bytes: &TOKEN_WASM_BYTES,
         // User deploying the contract,
@@ -53,7 +55,7 @@ fn init(initial_balance: u128) -> (UserAccount, ContractAccount<ContractContract
 /// Example of how to create and use an user transaction.
 fn init2(initial_balance: u128) {
     let master_account = init_simulator(None);
-    let txn = master_account.create_transaction("contract".into());
+    let txn = master_account.create_transaction(FT_CONTRACT_NAME.into());
     // uses default values for deposit and gas
     let res = txn
         .create_account()
@@ -103,7 +105,7 @@ fn test_sim_transfer() {
 
     let value = alice.call(
         PendingContractTx::new(
-            "contract",
+            FT_CONTRACT_NAME,
             "ft_balance_of",
             json!({ "account_id": master_account.account_id() }),
             true,
